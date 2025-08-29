@@ -64,8 +64,11 @@ export default async function dynamicConnectionHandler(req) {
     let routingReason;
 
     // Route mutations to primary database
-    if (requestData.operationType === "mutation" || 
-        requestData.operationType === "mutationExplain" || 
+    if (requestData.operationType === "mutation" ||
+        requestData.operationType === "mutationExplain" ||
+        requestData.session.variables["x-hasura-query-read-no-stale"] === 1 ||
+        requestData.session.variables["x-hasura-query-read-no-stale"] === "1" ||
+        requestData.session.variables["x-hasura-query-read-no-stale"] === true ||
         requestData.session.variables["x-hasura-query-read-no-stale"] === "true") {
       
       selectedConnection = Config.primary_connection_name;
