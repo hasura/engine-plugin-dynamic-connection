@@ -19,6 +19,24 @@ export default async function dynamicConnectionHandler(req) {
       hasBody: !!req.body
     });
 
+    const token = Config.headers["hasura-m-auth"];
+
+    if(req.header("hasura-m-auth") !== token) {
+      logger.warn("Unauthorized request", {
+        "endpoint": "/pre/ndc",
+        "reason": "invalid_auth_header"
+      });
+
+      return userError({
+        attributes: { unauthorized: true },
+        response: {
+          error: "Unauthorized",
+          message: "Invalid auth header"
+        },
+        message: "Unauthorized request"
+      });
+    }
+
     // Validate the request body using Joi
     const { error, value: requestData } = webhookRequestSchema.validate(req.body);
     
