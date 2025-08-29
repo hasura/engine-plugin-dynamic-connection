@@ -4,4 +4,4 @@ WORKDIR /app
 COPY . .
 
 RUN npm install
-EXPOSE 8793
+EXPOSE 8787
