@@ -3,9 +3,9 @@ import { respond, userError, serverError } from "../server/response.js";
 import { webhookRequestSchema } from "../types/schemas.js";
 import logger from "../logger.js";
 
-// Global counter for round-robin selection
+// Global counter for round-robin selection for each project
 // Note we are relying on server state here. A more robust implementation would use something like redis
-let currentReplicaIndex = 0;
+let currentReplicaIndex = {};
 
 /**
  * Dynamic connection routing handler for pre-NDC requests
@@ -34,6 +34,63 @@ export default async function dynamicConnectionHandler(req) {
           message: "Invalid auth header"
         },
         message: "Unauthorized request"
+      });
+    }
+
+    // Get the primary connection name and replica connection names from header
+    // Get the header name from config or use `hasura-primary-connection-name`
+    const primaryConnectionNameHeader = Config.primary_connection_name_header_name || "hasura-primary-connection-name";
+    // Get the header name from config or use `hasura-replica-connection-names`
+    const replicaConnectionNamesHeader = Config.replica_connection_names_header_name || "hasura-replica-connection-names";
+    const primaryConnectionName = req.header(primaryConnectionNameHeader);
+    const replicaConnectionNames = req.header(replicaConnectionNamesHeader);
+
+    if (!primaryConnectionName) {
+      logger.error("Primary connection name not found in header", {
+        headerName: primaryConnectionNameHeader
+      });
+
+      return serverError({
+        attributes: { primary_connection_name_not_found: true },
+        response: {
+          error: "Internal server error",
+          message: "Primary connection name not found in header"
+        },
+        message: "Primary connection name not found in header"
+      });
+    }
+    if (!replicaConnectionNames) {
+      logger.error("Replica connection names not found in header", {
+        headerName: replicaConnectionNamesHeader
+      });
+
+      return serverError({
+        attributes: { replica_connection_names_not_found: true },
+        response: {
+          error: "Internal server error",
+          message: "Replica connection names not found in header"
+        },
+        message: "Replica connection names not found in header"
+      });
+    }
+    // Parse the replica connection names as a comma-separated list
+    const replicaConnectionNamesList = replicaConnectionNames.split(",");
+
+    // Get the project ID from the header
+    const projectIdHeader = Config.project_id_header_name || "hasura-unique-project-id";
+    const projectId = req.header(projectIdHeader);
+    if (!projectId) {
+      logger.error("Project ID not found in header", {
+        headerName: projectIdHeader
+      });
+
+      return serverError({
+        attributes: { project_id_not_found: true },
+        response: {
+          error: "Internal server error",
+          message: "Project ID not found in header"
+        },
+        message: "Project ID not found in header"
       });
     }
 
@@ -71,7 +128,7 @@ export default async function dynamicConnectionHandler(req) {
         requestData.session.variables["x-hasura-query-read-no-stale"] === true ||
         requestData.session.variables["x-hasura-query-read-no-stale"] === "true") {
       
-      selectedConnection = Config.primary_connection_name;
+      selectedConnection = primaryConnectionName;
       routingReason = "mutation_or_no_stale";
       
       logger.info("Routing to primary database", {
@@ -80,11 +137,21 @@ export default async function dynamicConnectionHandler(req) {
         connection: selectedConnection
       });
     } else {
+      // Check if the project ID exists in the currentReplicaIndex, if not, add it
+      if (!currentReplicaIndex[projectId]) {
+        currentReplicaIndex[projectId] = 0;
+      }
+
+      // Check if the index is out of bounds for the current replica list
+      if (currentReplicaIndex[projectId] >= replicaConnectionNamesList.length) {
+        currentReplicaIndex[projectId] = 0;
+      }
+
       // Route queries to read replicas using round-robin
-      selectedConnection = Config.replica_connection_names[currentReplicaIndex];
+      selectedConnection = replicaConnectionNamesList[currentReplicaIndex[projectId]];
       
       // Increment the index for the next request
-      currentReplicaIndex = (currentReplicaIndex + 1) % Config.replica_connection_names.length;
+      currentReplicaIndex[projectId] = (currentReplicaIndex[projectId] + 1) % replicaConnectionNamesList.length;
       
       routingReason = "round_robin_replica";
       
@@ -92,7 +159,7 @@ export default async function dynamicConnectionHandler(req) {
         operationType: requestData.operationType,
         reason: routingReason,
         connection: selectedConnection,
-        replicaIndex: currentReplicaIndex - 1
+        replicaIndex: currentReplicaIndex[projectId] - 1
       });
     }
 
@@ -104,7 +171,7 @@ export default async function dynamicConnectionHandler(req) {
         connection_name: selectedConnection,
         routing_reason: routingReason,
         operation_type: requestData.operationType,
-        replica_index: routingReason === "round_robin_replica" ? currentReplicaIndex - 1 : undefined
+        replica_index: routingReason === "round_robin_replica" ? currentReplicaIndex[projectId] - 1 : undefined
       },
       response: {
         ndcRequest: requestData.ndcRequest

@@ -2,11 +2,14 @@ export const Config = {
   // Hasura secret to verify the sender. Replace with your new secret.
   headers: { "hasura-m-auth": "zZkhKqFjqXR4g5MZCsJUZCnhCcoPyZ" },
 
-  // List of connection names for read replicas
-  replica_connection_names: ["replica1", "replica2", "replica3"],
+  // Header name for read replica connection names
+  replica_connection_names_header_name: "hasura-replica-connection-names",
 
-  // Primary connection name for mutations and no-stale queries
-  primary_connection_name: "primary",
+  // Header name for primary connection name
+  primary_connection_name_header_name: "hasura-primary-connection-name",
+
+  // Header name for project identifier
+  project_id_header_name: "hasura-unique-project-id",
 
   // The URL for an opentelemetry collector.
   otel_endpoint: "https://gateway.otlp.hasura.io:443/v1/traces",
