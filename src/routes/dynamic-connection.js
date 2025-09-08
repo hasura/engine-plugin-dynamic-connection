@@ -120,13 +120,23 @@ export default async function dynamicConnectionHandler(req) {
     let selectedConnection;
     let routingReason;
 
+    let read_no_stale_header = false;
+    if (req.header("x-hasura-query-read-no-stale") === "1" ||
+        req.header("x-hasura-query-read-no-stale") === 1 ||
+        req.header("x-hasura-query-read-no-stale") === true ||
+        req.header("x-hasura-query-read-no-stale") === "true") {
+      read_no_stale_header = true;
+    }
+
     // Route mutations to primary database
     if (requestData.operationType === "mutation" ||
         requestData.operationType === "mutationExplain" ||
         requestData.session.variables["x-hasura-query-read-no-stale"] === 1 ||
         requestData.session.variables["x-hasura-query-read-no-stale"] === "1" ||
         requestData.session.variables["x-hasura-query-read-no-stale"] === true ||
-        requestData.session.variables["x-hasura-query-read-no-stale"] === "true") {
+        requestData.session.variables["x-hasura-query-read-no-stale"] === "true" ||
+        read_no_stale_header
+      ) {
       
       selectedConnection = primaryConnectionName;
       routingReason = "mutation_or_no_stale";
