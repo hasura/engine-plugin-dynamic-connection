@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-const { BasicTracerProvider, SimpleSpanProcessor } = require("@opentelemetry/sdk-trace-node");
+const { BasicTracerProvider, BatchSpanProcessor } = require("@opentelemetry/sdk-trace-node");
 const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
 const { registerInstrumentations } = require("@opentelemetry/instrumentation");
 const { HttpInstrumentation } = require("@opentelemetry/instrumentation-http");
@@ -19,7 +19,7 @@ const provider = new BasicTracerProvider({
   resource: resourceFromAttributes({
     "service.name": "engine-plugin-dynamic-connection",
   }),
-  spanProcessors: [new SimpleSpanProcessor(traceExporter)]
+  spanProcessors: [new BatchSpanProcessor(traceExporter)]
 });
 
 trace.setGlobalTracerProvider(provider);

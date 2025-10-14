@@ -67,7 +67,7 @@ const LOG_LEVEL_NAMES = {
 class Logger {
   constructor() {
     // Default to INFO level, can be overridden by environment variable
-    this.level = this.parseLogLevel(process.env.LOG_LEVEL || 'INFO');
+    this.level = this.parseLogLevel(process.env.LOG_LEVEL || 'WARN');
     this.serviceName = 'engine-plugin-dynamic-connection';
   }
 
