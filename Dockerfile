@@ -1,4 +1,4 @@
-FROM bitnami/express:latest
+FROM public.ecr.aws/bitnami/express:latest
 
 WORKDIR /app
 COPY . .
