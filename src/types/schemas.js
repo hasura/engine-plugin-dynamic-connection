@@ -5,7 +5,7 @@ export const sessionVariablesSchema = Joi.object().pattern(Joi.string(), Joi.any
 
 export const sessionSchema = Joi.object({
   role: Joi.string().required(),
-  variables: sessionVariablesSchema.required()
+  variables: sessionVariablesSchema.default({})  // Default to empty object if not provided
 });
 
 export const ndcRequestSchema = Joi.object({

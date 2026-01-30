@@ -1,6 +1,8 @@
 export const Config = {
-  // Hasura secret to verify the sender. Replace with your new secret.
-  headers: { "hasura-m-auth": "zZkhKqFjqXR4g5MZCsJUZCnhCcoPyZ" },
+  // Hasura secret to verify the sender. Loaded from environment variable.
+  headers: {
+    "hasura-m-auth": process.env.WEBHOOK_TOKEN || "default-dev-token-change-me"
+  },
 
   // Header name for read replica connection names
   replica_connection_names_header_name: "hasura-replica-connection-names",
